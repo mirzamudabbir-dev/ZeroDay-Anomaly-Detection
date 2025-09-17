@@ -1,61 +1,78 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
+import torch
 import os
+import requests
 
-# Paths
-TEST_LOGS_PATH = "/Users/mudabbir/Documents/SIH/dataset/test/test_logs.csv"
-HISTOGRAM_PATH = "/Users/mudabbir/Documents/SIH/dataset/test/anomaly_score_histogram.png"
-SCATTER_PATH = "/Users/mudabbir/Documents/SIH/dataset/test/anomaly_score_scatter_topN.png"
+# -----------------------------
+# 1️⃣ Model Download & Load
+# -----------------------------
+MODEL_URL = "https://huggingface.co/mirzamudabbir-dev/zeroday-anomaly-model/resolve/main/contrastive_model_ntxent.pth"  # Replace with your Hugging Face raw model URL
+MODEL_PATH = "contrastive_model_ntxent.pth"
 
-st.set_page_config(page_title="Anomaly Detection Dashboard", layout="wide")
+if not os.path.exists(MODEL_PATH):
+    st.info("Downloading model...")
+    r = requests.get(MODEL_URL, stream=True)
+    with open(MODEL_PATH, "wb") as f:
+        for chunk in r.iter_content(chunk_size=8192):
+            if chunk:
+                f.write(chunk)
+    st.success("Model downloaded.")
 
-st.title("🔍 Anomaly Detection Results Dashboard")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = torch.load(MODEL_PATH, map_location=device)
+model.eval()
 
-# Load test logs
-if os.path.exists(TEST_LOGS_PATH):
-    df = pd.read_csv(TEST_LOGS_PATH)
-    st.success(f"Loaded {len(df)} records from test logs ✅")
+# -----------------------------
+# 2️⃣ App UI
+# -----------------------------
+st.title("Zero-Day Anomaly Detection Dashboard")
 
-    # Show summary
-    st.subheader("📊 Summary")
-    st.write(df['label'].value_counts())
+st.markdown("""
+Upload CSV files containing network or system logs to detect anomalies.
+You can also enter a site URL for live analysis (feature placeholder for now).
+""")
 
-    # Histogram from file
-    st.subheader("📈 Anomaly Score Distribution")
-    if os.path.exists(HISTOGRAM_PATH):
-        st.image(HISTOGRAM_PATH, caption="Anomaly Score Histogram")
-    else:
-        st.warning("Histogram not found. Run evaluate_model.py first.")
+# CSV Upload
+uploaded_file = st.file_uploader("Upload CSV for anomaly detection", type="csv")
+if uploaded_file:
+    df = pd.read_csv(uploaded_file)
+    st.write("Preview of uploaded data:")
+    st.dataframe(df.head())
 
-    # Scatter plot from file
-    st.subheader("📉 Top Anomalies Scatter")
-    if os.path.exists(SCATTER_PATH):
-        st.image(SCATTER_PATH, caption="Scatter Plot of Top Anomalies")
-    else:
-        st.warning("Scatter plot not found. Run evaluate_model.py first.")
+    # -----------------------------
+    # 3️⃣ Preprocess & Model Inference
+    # -----------------------------
+    try:
+        # Replace this with your actual preprocessing
+        processed_data = torch.tensor(df.select_dtypes('float').values.astype('float32'))
 
-    # Interactive Table
-    st.subheader("🔎 Explore Data")
-    option = st.selectbox("Filter by label:", ["All", "Anomalous", "Normal"])
-    if option != "All":
-        filtered = df[df['label'] == option]
-    else:
-        filtered = df
-    st.dataframe(filtered.head(100))  # Show first 100 rows
+        # Model inference
+        with torch.no_grad():
+            predictions = model(processed_data)
 
-    # Top anomalies
-    st.subheader("🔥 Top 20 Anomalies")
-    top_anomalies = df.sort_values(by="anomaly_score", ascending=False).head(20)
-    st.dataframe(top_anomalies)
+        # Display predictions
+        st.subheader("Predictions / Anomaly Scores")
+        st.dataframe(predictions.numpy())
+    except Exception as e:
+        st.error(f"Error during inference: {e}")
 
-    # Download option
-    st.download_button(
-        label="📥 Download Test Logs CSV",
-        data=df.to_csv(index=False).encode("utf-8"),
-        file_name="test_logs.csv",
-        mime="text/csv"
-    )
+# Site URL input (placeholder)
+site_url = st.text_input("Enter site URL to analyze")
+if site_url:
+    st.write(f"Analysis results for {site_url} will appear here (feature under development).")
 
-else:
-    st.error("❌ Test logs not found. Run evaluate_model.py first.")
+# -----------------------------
+# 4️⃣ Analytics & Plots
+# -----------------------------
+if uploaded_file:
+    st.subheader("Anomaly Score Histogram")
+    try:
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
+        ax.hist(predictions.numpy(), bins=30)
+        st.pyplot(fig)
+    except Exception as e:
+        st.warning(f"Plotting error: {e}")
+
+st.info("Dashboard is ready. Upload CSV or enter URL to start analysis.")
