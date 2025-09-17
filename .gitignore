@@ -31,9 +31,3 @@ Thumbs.db
 
 # Jupyter notebooks checkpoints
 .ipynb_checkpoints/
-
-echo "ml_env/" >> .gitignore
-echo "__pycache__/" >> .gitignore
-echo "*.pth" >> .gitignore
-echo "*.csv" >> .gitignore
-echo "*.png" >> .gitignore
