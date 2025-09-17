@@ -1,0 +1,33 @@
+# Ignore Python cache and compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pkl
+
+# Ignore virtual environments
+ml_env/
+venv/
+.env/
+
+# Ignore dataset (large files)
+dataset/
+*.zip
+*.tar
+*.gz
+
+# Ignore logs and checkpoints
+*.log
+*.csv
+*.pth
+*.h5
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore Streamlit config cache
+.streamlit/
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/

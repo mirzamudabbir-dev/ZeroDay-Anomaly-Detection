@@ -1,0 +1,11 @@
+torch
+torchvision
+scikit-learn
+pandas
+numpy
+matplotlib
+streamlit
+streamlit-authenticator
+sqlalchemy
+requests
+beautifulsoup4
